@@ -1,0 +1,53 @@
+# .pre-commit-config.yaml
+# Pre-commit configuration file to set up various hooks for code formatting,
+# linting, and other checks. This configuration targets Python files and YAML files,
+# while excluding specific files like 'scratch.py'.
+
+exclude: '^(.*/)?scratch\.py$'
+repos:
+  # Formatters
+  - repo: https://github.com/psf/black
+    rev: 24.10.0
+    hooks:
+      - id: black
+        files: \.py$ # Target only Python files
+  - repo: https://github.com/pre-commit/mirrors-isort
+    rev: v5.10.1
+    hooks:
+      - id: isort
+        files: \.py$ # Target only Python files
+  - repo: https://github.com/google/yamlfmt
+    rev: v0.14.0
+    hooks:
+      - id: yamlfmt
+  # Linters
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.1.1
+    hooks:
+      - id: flake8
+        files: \.py$ # Target only Python files
+        additional_dependencies:
+          - flake8-pyproject # Use pyproject.toml for configuration
+  # Miscellaneous
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+  - repo: https://github.com/asottile/add-trailing-comma
+    rev: v3.1.0
+    hooks:
+      - id: add-trailing-comma
+        files: \.py$ # Target only Python files
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    # uv version.
+    rev: 0.6.14
+    hooks:
+      - id: uv-lock
+  - repo: https://github.com/mwouts/jupytext
+    rev: v1.16.1
+    hooks:
+      - id: jupytext
+        args: ["--set-formats", "py:percent,ipynb"]
+        files: ^notebooks/.*\.py$
