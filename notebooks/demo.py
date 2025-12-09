@@ -10,19 +10,12 @@
 #       jupytext_version: 1.16.1
 # ---
 
-# %%
-# demo.py
-"""
-Market Regime Detection via Maximum Mean Discrepancy (MMD)
-
-This script applies a sliding window MMD two-sample test to detect
-distributional regime changes in SPY returns. Detected boundaries
-are validated against known market events (e.g., COVID-19 crash).
-
-Usage:
-    Run cells sequentially in an interactive environment (VS Code, Jupyter),
-    or execute as a script: python demo.py
-"""
+# %% [markdown]
+# # Market Regime Detection via Maximum Mean Discrepancy (MMD)
+#
+# This notebook applies a sliding window MMD two-sample test to detect
+# distributional regime changes in SPY returns. Detected boundaries
+# are validated against known market events (e.g., COVID-19 crash).
 
 # %%
 # =============================================================================
@@ -61,12 +54,7 @@ THRESHOLD = 10.0  # values above this are flagged as boundaries
 MIN_GAP_DAYS = 20  # merge detections within this many days
 
 # Feature selection
-FEATURE_GROUP = (
-    "base"  # options: 'base', 'intraday_shape', 'vol_structure', 'all', etc.
-)
-
-# Output
-SAVE_FIGURES = True
+FEATURE_GROUP = "base"  # options: 'base', 'intraday_shape', 'vol_structure', 'all'
 
 
 # %%
@@ -234,90 +222,86 @@ def summarize_boundaries(
 # Main Execution
 # =============================================================================
 
-if __name__ == "__main__":
-    # --- Prepare data ---
-    signal, date_index = prepare_signal(FEATURE_GROUP)
-    gamma = compute_kernel_bandwidth(signal)
-    kernel_params = {"gamma": gamma}
+# --- Prepare data ---
+signal, date_index = prepare_signal(FEATURE_GROUP)
+gamma = compute_kernel_bandwidth(signal)
+kernel_params = {"gamma": gamma}
 
-    # --- Run MMD analysis ---
-    results = run_sliding_window_analysis(
-        signal=signal,
-        kernel_fn=rbf,
-        kernel_params=kernel_params,
-        window=WINDOW,
-        step=STEP,
-        n_permutations=N_PERMUTATIONS,
-    )
+# --- Run MMD analysis ---
+results = run_sliding_window_analysis(
+    signal=signal,
+    kernel_fn=rbf,
+    kernel_params=kernel_params,
+    window=WINDOW,
+    step=STEP,
+    n_permutations=N_PERMUTATIONS,
+)
 
-    # --- Convert to DataFrame with dates ---
-    results_df = results_to_dataframe(results, date_index)
+# --- Convert to DataFrame with dates ---
+results_df = results_to_dataframe(results, date_index)
 
-    print("\n" + "=" * 60)
-    print("Results Summary Statistics")
-    print("=" * 60)
-    print(results_df[["mmd", "std_from_null", "kta_val"]].describe().round(3))
+print("\n" + "=" * 60)
+print("Results Summary Statistics")
+print("=" * 60)
+print(results_df[["mmd", "std_from_null", "kta_val"]].describe().round(3))
 
-    # --- Validate against known events ---
-    validation_df = validate_against_known_events(results_df)
+# %%
+# =============================================================================
+# Validation Against Known Events
+# =============================================================================
 
-    # --- Detect boundaries ---
-    boundaries = find_regime_boundaries(
+validation_df = validate_against_known_events(results_df)
+
+# %%
+# =============================================================================
+# Detect Boundaries
+# =============================================================================
+
+boundaries = find_regime_boundaries(
+    results_df,
+    metric=METRIC,
+    threshold=THRESHOLD,
+    min_gap_days=MIN_GAP_DAYS,
+)
+summarize_boundaries(boundaries, results_df)
+
+# %%
+# =============================================================================
+# Main Figure: 4-Panel Regime Detection
+# =============================================================================
+
+fig1, axes1 = plot_regime_detection_panel(
+    price_series=df["Close"],
+    results_df=results_df,
+    metric=METRIC,
+    threshold=THRESHOLD,
+    min_gap_days=MIN_GAP_DAYS,
+    title=f"Market Regime Detection via MMD (window={WINDOW}d, {FEATURE_GROUP} features)",
+)
+
+# %%
+# =============================================================================
+# Summary Figure: Price with Boundaries
+# =============================================================================
+
+fig2, ax2 = plot_regime_boundaries_summary(
+    price_series=df["Close"],
+    results_df=results_df,
+    boundaries=boundaries,
+    window_days=WINDOW,
+)
+
+# %%
+# =============================================================================
+# Threshold Sensitivity
+# =============================================================================
+
+print("Threshold Sensitivity Analysis")
+print("-" * 40)
+for thresh in [5.0, 8.0, 10.0, 12.0, 15.0, 20.0]:
+    b = find_regime_boundaries(
         results_df,
-        metric=METRIC,
-        threshold=THRESHOLD,
+        threshold=thresh,
         min_gap_days=MIN_GAP_DAYS,
     )
-    summarize_boundaries(boundaries, results_df)
-
-    # --- Generate figures ---
-    print("\n" + "=" * 60)
-    print("Generating Figures")
-    print("=" * 60)
-
-    # Main 4-panel figure
-    fig1, axes1 = plot_regime_detection_panel(
-        price_series=df["Close"],
-        results_df=results_df,
-        metric=METRIC,
-        threshold=THRESHOLD,
-        min_gap_days=MIN_GAP_DAYS,
-        title=f"Market Regime Detection via MMD (window={WINDOW}d, {FEATURE_GROUP} features)",
-        save_path="regime_detection_panel.png" if SAVE_FIGURES else None,
-    )
-
-    # Summary figure
-    fig2, ax2 = plot_regime_boundaries_summary(
-        price_series=df["Close"],
-        results_df=results_df,
-        boundaries=boundaries,
-        window_days=WINDOW,
-    )
-    if SAVE_FIGURES:
-        fig2.savefig("regime_boundaries_summary.png", dpi=150, bbox_inches="tight")
-        print("Saved: regime_boundaries_summary.png")
-
-    print("\nDone.")
-
-
-# %%
-# =============================================================================
-# Interactive Exploration (run cells below manually)
-# =============================================================================
-
-# %% [markdown]
-# ## Threshold Sensitivity
-# Try different thresholds to see how boundary count changes.
-
-# %%
-# Threshold sensitivity analysis
-if "results_df" in dir():
-    print("Threshold Sensitivity Analysis")
-    print("-" * 40)
-    for thresh in [5.0, 8.0, 10.0, 12.0, 15.0, 20.0]:
-        b = find_regime_boundaries(
-            results_df,
-            threshold=thresh,
-            min_gap_days=MIN_GAP_DAYS,
-        )
-        print(f"  threshold={thresh:5.1f}  →  {len(b):2d} boundaries")
+    print(f"  threshold={thresh:5.1f}  →  {len(b):2d} boundaries")
