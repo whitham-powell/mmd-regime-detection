@@ -567,14 +567,6 @@ plt.show()
 # - **Step size is a cheap way to reduce noisy detections** (before adjusting threshold)
 # - For apples-to-apples comparison, consider normalizing by window-specific null distribution
 #
-# ### The Three Knobs
-#
-# | Parameter | Affects | Recommendation |
-# |-----------|---------|----------------|
-# | Kernel | What distributional differences are captured | RBF with median heuristic |
-# | Window size | Statistical power, temporal smoothing | 30-60 days for balanced detection |
-# | Step size | Resolution, smoothing, runtime | 5 days (balance), increase to reduce noise |
-#
 # ### Limitations
 #
 # - Fixed threshold across window sizes is not ideal
