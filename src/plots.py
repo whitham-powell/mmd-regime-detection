@@ -196,10 +196,12 @@ def plot_regime_boundaries_summary(
     results_df: pd.DataFrame,
     boundaries: pd.DatetimeIndex,
     window_days: int = 30,
-    figsize: Tuple[int, int] = (12, 4),
+    figsize: Tuple[int, int] = (12, 5),
+    annotate: bool = True,
+    max_annotations: int = 10,
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
-    Simple single-panel plot: price with detected boundaries annotated.
+    Simple single-panel plot: price with detected boundaries.
 
     Parameters
     ----------
@@ -213,6 +215,10 @@ def plot_regime_boundaries_summary(
         Window size used (for annotation)
     figsize : tuple
         Figure size
+    annotate : bool
+        Whether to add date annotations on the plot
+    max_annotations : int
+        Maximum number of boundaries to annotate (prevents clutter)
 
     Returns
     -------
@@ -226,25 +232,43 @@ def plot_regime_boundaries_summary(
 
     ax.plot(price_aligned.index, price_aligned.values, "k-", lw=1, label="SPY")
 
-    for i, b in enumerate(boundaries):
+    # Draw boundary lines
+    for b in boundaries:
         ax.axvline(b, color="red", alpha=0.7, lw=1.5, ls="--")
-        # Annotate with date
-        ax.annotate(
-            b.strftime("%Y-%m-%d"),
-            xy=(
-                b,
-                (
-                    price_aligned.loc[b]
-                    if b in price_aligned.index
-                    else price_aligned.iloc[-1]
-                ),
-            ),
-            xytext=(10, 10 + (i % 3) * 15),  # stagger labels
-            textcoords="offset points",
-            fontsize=8,
-            color="red",
-            rotation=45,
-        )
+
+    # Annotate boundaries (limited to avoid clutter)
+    if annotate and len(boundaries) > 0:
+        # If too many boundaries, only annotate a subset
+        if len(boundaries) > max_annotations:
+            # Annotate first, last, and evenly spaced in between
+            indices = np.linspace(0, len(boundaries) - 1, max_annotations, dtype=int)
+            boundaries_to_annotate = boundaries[indices]
+        else:
+            boundaries_to_annotate = boundaries
+
+        # Alternate y-positions to reduce overlap
+        y_min, y_max = price_aligned.min(), price_aligned.max()
+        y_range = y_max - y_min
+        y_positions = [
+            y_max - 0.05 * y_range,  # top
+            y_max - 0.15 * y_range,  # upper
+            y_max - 0.25 * y_range,  # middle-upper
+            y_min + 0.25 * y_range,  # middle-lower
+            y_min + 0.15 * y_range,  # lower
+            y_min + 0.05 * y_range,  # bottom
+        ]
+
+        for i, b in enumerate(boundaries_to_annotate):
+            y_pos = y_positions[i % len(y_positions)]
+            ax.annotate(
+                b.strftime("%Y-%m-%d"),
+                xy=(b, y_pos),
+                fontsize=8,
+                color="red",
+                ha="center",
+                va="center",
+                bbox=dict(boxstyle="round,pad=0.2", facecolor="white", alpha=0.8),
+            )
 
     ax.set_ylabel("Price")
     ax.set_xlabel("Date")
@@ -253,14 +277,15 @@ def plot_regime_boundaries_summary(
     ax.xaxis.set_major_locator(mdates.MonthLocator(interval=3))
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
     ax.grid(True, alpha=0.3)
-    ax.legend()
+    ax.legend(loc="upper left")
 
     plt.tight_layout()
     return fig, ax
 
 
-# TODO: needs typing
-# TODO: these plot functions are basically identical, could probably be combined into one with an argument for which metric to plot
+# --- Original plotting functions (kept for backwards compatibility) ---
+
+
 def plot_sliding_window_mmds(
     results,
     title="Sliding Window MMD Analysis",
