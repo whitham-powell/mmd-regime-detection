@@ -128,3 +128,19 @@ for w, res_df in comparison_results.items():
     print(f"Window={w}: {len(b)} boundaries")
 
 # %%
+
+
+# %% wont run in this files just keeping save for later manual use
+# =============================================================================
+# LaTeX Export (for slides)
+# =============================================================================
+
+# Generate LaTeX table
+latex_table = summary_df.to_latex(
+    caption="Kernel Comparison for Regime Detection",
+    label="tab:kernel_comparison",
+    float_format="%.2f",
+)
+print("\nLaTeX Table:")
+print("-" * 70)
+print(latex_table)
