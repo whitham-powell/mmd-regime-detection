@@ -580,4 +580,4 @@ plt.show()
 # - Fixed threshold across window sizes is not ideal
 # - Larger windows have shorter valid date range (edges trimmed)
 # - Runtime increases with window size and decreases with step size
-# - Window × step interaction not fully explored
+# - Window x step interaction not fully explored
