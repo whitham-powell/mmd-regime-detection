@@ -128,12 +128,18 @@ def plot_regime_detection_panel(
     )
 
     # Panel 1: Price with regime boundaries
-    axes[0].plot(price_aligned.index, price_aligned.values, "k-", lw=1)
+    axes[0].plot(price_aligned.index, price_aligned.values, "k-", lw=1, label="SPY")
     for b in boundaries:
         axes[0].axvline(b, color="red", alpha=0.7, lw=1.5, ls="--")
     axes[0].set_ylabel("Price", fontsize=10)
     axes[0].set_title(title, fontsize=12, fontweight="bold")
     axes[0].grid(True, alpha=0.3)
+    axes[0].legend(
+        loc="upper left",
+        bbox_to_anchor=(0, 1.0),
+        borderaxespad=0,
+        fontsize=9,
+    )
 
     # Panel 2: MMD²
     axes[1].plot(results_df.index, results_df["mmd"], "b-", lw=1)
@@ -277,7 +283,7 @@ def plot_regime_boundaries_summary(
     ax.xaxis.set_major_locator(mdates.MonthLocator(interval=3))
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
     ax.grid(True, alpha=0.3)
-    ax.legend(loc="upper left")
+    ax.legend(loc="upper left", bbox_to_anchor=(0, 1.1), borderaxespad=0)
 
     plt.tight_layout()
     return fig, ax
