@@ -2,7 +2,6 @@
 
 # %%
 
-from sympy import O
 import yfinance as yf
 import numpy as np
 import pandas as pd
@@ -87,6 +86,64 @@ features_base = pd.DataFrame(
         "log_low": log_low,
         "log_close": log_close,
         "log_vol": log_vol,
+    }
+).dropna()
+
+features_intraday_shape = pd.DataFrame(
+    {
+        "body": body,
+        "range": range_,
+        "upper_wick": upper,  # calling this and the following "wick" is not quite accurate with respect to candle terminology, but it's close enough
+        "lower_wick": lower,
+        "CLV": CLV,
+    }
+).dropna()
+
+features_cross_day = pd.DataFrame(
+    {
+        "overnight": overnight,
+        "true_range": true_range,
+        "C_minus_yH": C_minus_yH,
+        "C_minus_yL": C_minus_yL,
+        "O_minus_yH": O_minus_yH,
+        "O_minus_yL": O_minus_yL,
+    }
+).dropna()
+
+features_shape_dynamics = pd.DataFrame(
+    {
+        "d_body": d_body,
+        "d_range": d_range,
+        "d_upper_wick": d_upper,
+        "d_lower_wick": d_lower,
+        "d_CLV": d_CLV,
+        "d_log_vol": d_log_vol,
+    }
+).dropna()
+
+
+features_vol_structure = pd.DataFrame(
+    {
+        "rv_10": rv_10,
+        "rv_30": rv_30,
+        "rv_60": rv_60,
+        "rv_90": rv_90,
+    }
+).dropna()
+
+features_simple_moving_averages = pd.DataFrame(
+    {
+        "sma_20": sma_20,
+        "sma_50": sma_50,
+        "sma_200": sma_200,
+    }
+).dropna()
+
+features_moving_true_range = pd.DataFrame(
+    {
+        "mtr_20": mtr_20,
+        "mtr_50": mtr_50,
+        "mtr_200": mtr_200,
     }
 ).dropna()
 
@@ -267,110 +324,83 @@ plt.title("Sliding Window MMD Analysis")
 plt.legend()
 plt.show()
 
-# log_close = np.log(df["Close"])
-# log_open = np.log(df["Open"])
-# log_high = np.log(df["High"])
-# log_low = np.log(df["Low"])
-# log_vol = np.log(df["Volume"])
+# %%
+import pandas as pd
 
-# features_rawish = pd.DataFrame(
-#     {
-#         "log_open": log_open,
-#         "log_high": log_high,
-#         "log_low": log_low,
-#         "log_close": log_close,
-#         "d_log_vol": log_vol.diff(),
-#         "ret": log_close.diff(),
-#     }
-# ).dropna()
+# assuming these DataFrames are already defined:
+# features_base
+# features_intraday_shape
+# features_cross_day
+# features_shape_dynamics
+# features_vol_structure
+# features_simple_moving_averages
+# features_moving_true_range
+# features_all  # optional convenience
 
-# # Engineered features
-# body = log_close - log_open
-# range_ = log_high - log_low
-# upper = log_high - log_close
-# lower = log_close - log_low
-# CLV = (log_close - log_low) / (log_high - log_low)
+FEATURE_GROUPS = {
+    "base": features_base,
+    "intraday_shape": features_intraday_shape,
+    "cross_day": features_cross_day,
+    "shape_dynamics": features_shape_dynamics,
+    "vol_structure": features_vol_structure,
+    "sma": features_simple_moving_averages,
+    "moving_true_range": features_moving_true_range,
+    "all": features_all,  # full library shortcut
+}
 
-# overnight = log_open - log_close.shift(1)
-# intraday = log_close - log_open
-# gap = overnight
-# ret = log_close.diff()
-# oo_ret = log_open.diff()
 
-# true_range = pd.concat(
-#     [
-#         (log_high - log_low),
-#         (log_high - log_close.shift(1)).abs(),
-#         (log_low - log_close.shift(1)).abs(),
-#     ],
-#     axis=1,
-# ).max(axis=1)
+def make_features(group_names, dropna=True):
+    """
+    Build a feature DataFrame from one or more named feature groups.
 
-# C_minus_yH = log_close - log_high.shift(1)
-# C_minus_yL = log_close - log_low.shift(1)
+    Parameters
+    ----------
+    group_names : list[str] or str
+        Name or list of names from FEATURE_GROUPS keys.
+        e.g. ["base", "intraday_shape"] or "base".
+    dropna : bool, default True
+        If True, drop any rows with NaNs after concatenation
+        (inner sample intersection).
 
-# d_body = body.diff()
-# d_range = range_.diff()
-# d_upper = upper.diff()
-# d_lower = lower.diff()
-# d_CLV = CLV.diff()
+    Returns
+    -------
+    pd.DataFrame
+        Concatenated feature matrix with aligned index.
+    """
+    if isinstance(group_names, str):
+        group_names = [group_names]
 
-# d_log_vol = log_vol.diff()
-# rv_20 = log_close.diff().rolling(20).std()
-# rv_60 = log_close.diff().rolling(60).std()
-# rv_120 = log_close.diff().rolling(120).std()
+    dfs = []
+    for name in group_names:
+        if name not in FEATURE_GROUPS:
+            raise ValueError(
+                f"Unknown feature group: {name!r}. "
+                f"Available: {list(FEATURE_GROUPS.keys())}"
+            )
+        dfs.append(FEATURE_GROUPS[name])
 
-# features_minimal = pd.DataFrame(
-#     {
-#         "body": log_close - log_open,
-#         "range": log_high - log_low,
-#         "upper_wick": log_high - log_close,
-#         "lower_wick": log_open - log_low,
-#         "ret": log_close.diff(),
-#         "d_log_vol": log_vol.diff(),
-#     }
-# ).dropna()
+    # Align on index; inner join keeps only timestamps present in all groups
+    features = pd.concat(dfs, axis=1, join="inner")
 
-# features_maximal = pd.DataFrame(
-#     {
-#         "body": body,
-#         "range": range_,
-#         "upper_wick": upper,
-#         "lower_wick": lower,
-#         "CLV": CLV,
-#         "overnight": overnight,
-#         "intraday": intraday,
-#         "ret": ret,
-#         "oo_ret": oo_ret,
-#         "gap": gap,
-#         "true_range": true_range,
-#         "C_minus_yH": log_close - log_high.shift(1),
-#         "C_minus_yL": log_close - log_low.shift(1),
-#         "d_body": body.diff(),
-#         "d_range": range_.diff(),
-#         "d_upper_wick": upper.diff(),
-#         "d_lower_wick": lower.diff(),
-#         "d_CLV": CLV.diff(),
-#         "d_log_vol": log_vol.diff(),
-#         "realized_vol20": log_close.diff().rolling(20).std(),
-#     }
-# ).dropna()
+    if dropna:
+        features = features.dropna()
 
-# # pd.DataFrame(
-# #     {
-# #         "ret": log_close.diff(),
-# #         "d_log_vol": log_vol.diff(),
-# #         "open": log_open.diff(),
-# #         "high": log_high.diff(),
-# #         "low": log_low.diff(),
-# #         # "close": log_close.diff(),
-# #         "volatility": log_close.diff().rolling(window=20).std(),
-# #         "log_HO": log_high - log_open,
-# #         "log_LO": log_low - log_open,
-# #         # "log_CO": log_close - log_open,
-# #         "log_HL": log_high - log_low,
-# #     },
-# # ).dropna()
-# #
+    return features
+
 
 # %%
+# Example usage:
+# 1) Raw-only (Tier 0)
+X_base = make_features("base")
+
+# 2) Base + minimal dynamics (base + shape dynamics)
+X_dyn = make_features(["base", "shape_dynamics"])
+
+# 3) Shape-only representation
+X_shape = make_features("intraday_shape")
+
+# 4) Big structural set: base + intraday shape + cross-day + vol structure
+X_big = make_features(["base", "intraday_shape", "cross_day", "vol_structure"])
+
+# 5) Full library (equivalent to features_all)
+X_all = make_features("all")

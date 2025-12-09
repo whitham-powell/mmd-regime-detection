@@ -6,6 +6,7 @@ dependencies = [
     "ipython>=9.8.0",
     "jupyter>=1.1.1",
     "jupytext>=1.18.1",
+    "kernel-target-alignment",
     "matplotlib>=3.10.7",
     "nbconvert>=7.16.6",
     "pandas>=2.3.3",
@@ -17,3 +18,6 @@ dependencies = [
     "torch>=2.9.1",
     "yfinance>=0.2.66",
 ]
+
+[tool.uv.sources]
+kernel-target-alignment = { git = "https://github.com/whitham-powell/kernel-target-alignment.git" }
