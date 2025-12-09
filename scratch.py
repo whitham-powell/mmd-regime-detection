@@ -2,6 +2,8 @@
 
 # %%
 
+import time
+import torch
 import yfinance as yf
 import numpy as np
 import pandas as pd
@@ -196,20 +198,21 @@ def rbf_kernel(X, Y=None, sigma=1.0):
     X = np.atleast_2d(X)
     Y = np.atleast_2d(Y)
     D2 = cdist(X, Y, metric="sqeuclidean")
+    gamma = 1 / (2 * sigma**2)
+    return np.exp(-gamma * D2)
+    # return np.exp(-D2 / (2 * sigma**2))
 
-    return np.exp(-D2 / (2 * sigma**2))
 
-
-def mmd_squared(X, Y, sigma=1.0):
+def mmd_squared(X, Y, gamma=1.0):
     X = np.atleast_2d(X)
     Y = np.atleast_2d(Y)
 
-    Kxx = rbf_kernel(X, X, sigma=sigma)
-    Kyy = rbf_kernel(Y, Y, sigma=sigma)
-    Kxy = rbf_kernel(X, Y, sigma=sigma)
+    Kxx = rbf(X, X, gamma=gamma)
+    Kyy = rbf(Y, Y, gamma=gamma)
+    Kxy = rbf(X, Y, gamma=gamma)
 
-    print(f"Kxx shape: {Kxx.shape}, Kyy shape: {Kyy.shape}, Kxy shape: {Kxy.shape}")
-    print(f"X shape: {X.shape}, Y shape: {Y.shape}")
+    # print(f"Kxx shape: {Kxx.shape}, Kyy shape: {Kyy.shape}, Kxy shape: {Kxy.shape}")
+    # print(f"X shape: {X.shape}, Y shape: {Y.shape}")
     m, n = len(X), len(Y)
 
     np.fill_diagonal(Kxx, 0)
@@ -221,7 +224,7 @@ def mmd_squared(X, Y, sigma=1.0):
 
 
 def mmd_permutation_test(X, Y, sigma=1.0, n_permutations=500):
-    observed = mmd_squared(X, Y, sigma=sigma)
+    observed = mmd_squared(X, Y, gamma=sigma)
     pooled = np.vstack([X, Y])
     m = len(X)
 
@@ -229,7 +232,7 @@ def mmd_permutation_test(X, Y, sigma=1.0, n_permutations=500):
 
     for _ in range(n_permutations):
         perm = np.random.permutation(len(pooled))
-        null_dist.append(mmd_squared(pooled[perm[:m]], pooled[perm[m:]], sigma=sigma))
+        null_dist.append(mmd_squared(pooled[perm[:m]], pooled[perm[m:]], gamma=sigma))
 
     null_dist = np.array(null_dist)
     p_value = (null_dist >= observed).mean()
@@ -265,8 +268,8 @@ def sliding_window_mmd(returns, window=60, step=5, sigma=1.0, n_perms=500):
 
 # %%
 # returns = df["Close"].pct_change().dropna().values
-# returns = features_base.values
-returns = features_all.values
+returns = features_base.values
+# returns = torch.Tensor(features_all.values)
 import time
 
 # returns = log_close.diff().dropna().values
@@ -274,7 +277,7 @@ import time
 sigma = np.median(np.abs(returns - np.median(returns)))
 
 start_time = time.time()
-results = sliding_window_mmd(returns, window=10, step=1, sigma=sigma, n_perms=1000)
+results = sliding_window_mmd(returns, window=30, step=1, sigma=sigma, n_perms=1000)
 end_time = time.time()
 for r in results:
     if r["std_from_null"] > 2.0:
@@ -282,9 +285,9 @@ for r in results:
             f"Potential regime change at index {r['t']}: {r['std_from_null']:.2f} std from null"
         )
 
-    print(
-        f"Time: {r['t']}, MMD: {r['mmd']:.4f}, p-value: {r['p_val']:.4f}, Std from null: {r['std_from_null']:.4f}"
-    )
+    # print(
+    #     f"Time: {r['t']}, MMD: {r['mmd']:.4f}, p-value: {r['p_val']:.4f}, Std from null: {r['std_from_null']:.4f}"
+    # )
 print(f"Time taken: {end_time - start_time:.2f} seconds")
 
 # %% Plot results
@@ -404,3 +407,26 @@ X_big = make_features(["base", "intraday_shape", "cross_day", "vol_structure"])
 
 # 5) Full library (equivalent to features_all)
 X_all = make_features("all")
+
+# %%
+import time
+from kta import kta, kta_torch, alignment, alignment_torch, rbf, rbf_torch
+
+from src.mmd import sliding_window_mmd
+
+kernel_params = {"gamma": 1.0}
+kernel_fn = rbf
+
+start_time = time.time()
+results = sliding_window_mmd(
+    data=features_base.values,
+    kernel_fn=kernel_fn,
+    kernel_params=kernel_params,
+    window=30,
+    step=1,
+    n_permutations=1000,
+)
+end_time = time.time()
+print(f"Time taken: {end_time - start_time} seconds")
+
+# %%

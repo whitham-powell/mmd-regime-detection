@@ -21,3 +21,17 @@ dependencies = [
 
 [tool.uv.sources]
 kernel-target-alignment = { git = "https://github.com/whitham-powell/kernel-target-alignment.git" }
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+[tool.isort]
+profile = "black"
+
+[tool.flake8]
+ignore = ["E203", "E266", "E501", "W503"]
+max-line-length = 88
+max-complexity = 18
+select = ["B", "C", "E", "F", "W", "T4"]
+exclude = [".git", "__pycache__"]
