@@ -30,9 +30,9 @@ import pandas as pd
 from kta import rbf
 from sklearn.preprocessing import StandardScaler
 
-from src.features import df, make_features
-from src.mmd import sliding_window_mmd
-from src.plots import (
+from regime_detection.features import df, make_features
+from regime_detection.mmd import sliding_window_mmd
+from regime_detection.plots import (
     find_regime_boundaries,
     plot_regime_boundaries_summary,
     plot_regime_detection_panel,
