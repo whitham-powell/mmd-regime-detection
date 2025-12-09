@@ -12,6 +12,7 @@ def mmd_squared(
     Y: NDArray,
     kernel_fn: Optional[Callable] = None,
     kernel_params: Optional[Mapping[str, Any]] = None,
+    debug: bool = False,
 ) -> float:
     if kernel_fn is None:
         raise ValueError("A kernel function must be provided.")
@@ -19,8 +20,9 @@ def mmd_squared(
     Kyy = kernel_fn(Y, Y, **(kernel_params or {}))
     Kxy = kernel_fn(X, Y, **(kernel_params or {}))
 
-    print(f"Kxx shape: {Kxx.shape}, Kyy shape: {Kyy.shape}, Kxy shape: {Kxy.shape}")
-    print(f"X shape: {X.shape}, Y shape: {Y.shape}")
+    if debug:
+        print(f"Kxx shape: {Kxx.shape}, Kyy shape: {Kyy.shape}, Kxy shape: {Kxy.shape}")
+        print(f"X shape: {X.shape}, Y shape: {Y.shape}")
 
     m, n = len(X), len(Y)
 
@@ -96,7 +98,7 @@ def sliding_window_mmd(
     return results
 
 
-def compute_kta(X, Y, kernel_fn, kernel_params):
+def compute_kta(X, Y, kernel_fn, kernel_params, debug=False):
     params = kernel_params or {}
 
     Z = np.concatenate([X, Y])
@@ -108,5 +110,8 @@ def compute_kta(X, Y, kernel_fn, kernel_params):
     y = np.empty(n_x + n_y, dtype=np.float32)
     y[:n_x] = -1
     y[n_x:] = 1
-    print(f"K.shape={K.shape}, y.shape={y.shape}, Z.shape={Z.shape}")
+    if debug:
+        print(
+            f"n_x={n_x}, n_y={n_y}, n_x+n_y={n_x+n_y}, K.shape={K.shape}, y.shape={y.shape}, Z.shape={Z.shape}",
+        )
     return kta(K, y)
