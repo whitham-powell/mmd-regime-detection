@@ -28,6 +28,7 @@ from typing import Dict, List
 import numpy as np
 import pandas as pd
 from kta import rbf
+from sklearn.preprocessing import StandardScaler
 
 from src.features import df, make_features
 from src.mmd import sliding_window_mmd
@@ -56,6 +57,9 @@ MIN_GAP_DAYS = 20  # merge detections within this many days
 # Feature selection
 FEATURE_GROUP = "base"  # options: 'base', 'intraday_shape', 'vol_structure', 'all'
 
+# Standardization
+STANDARDIZE = True  # Use StandardScaler to standardize features
+
 
 # %%
 # =============================================================================
@@ -63,9 +67,20 @@ FEATURE_GROUP = "base"  # options: 'base', 'intraday_shape', 'vol_structure', 'a
 # =============================================================================
 
 
-def prepare_signal(feature_group: str = "base") -> tuple[np.ndarray, pd.DatetimeIndex]:
+def prepare_signal(
+    feature_group: str = "base",
+    standardize: bool = True,
+) -> tuple[np.ndarray, pd.DatetimeIndex]:
     """
     Load and prepare feature matrix for MMD analysis.
+
+    Parameters
+    ----------
+    feature_group : str
+        Name of feature group to load
+    standardize : bool
+        If True, standardize features to zero mean and unit variance.
+        Recommended for kernel methods to prevent scale-dominated distances.
 
     Returns
     -------
@@ -79,7 +94,17 @@ def prepare_signal(feature_group: str = "base") -> tuple[np.ndarray, pd.Datetime
     print(f"Features: {list(features.columns)}")
     print(f"Shape: {features.shape}")
     print(f"Date range: {features.index[0].date()} to {features.index[-1].date()}")
-    return features.values, features.index
+
+    values = features.values
+
+    if standardize:
+        scalar = StandardScaler()
+        values = scalar.fit_transform(values)
+        print("Standardization: Applied (zero mean, unit variance)")
+    else:
+        print("Standardization: None (raw features)")
+
+    return values, features.index
 
 
 def compute_kernel_bandwidth(signal: np.ndarray) -> float:
@@ -223,7 +248,7 @@ def summarize_boundaries(
 # =============================================================================
 
 # --- Prepare data ---
-signal, date_index = prepare_signal(FEATURE_GROUP)
+signal, date_index = prepare_signal(FEATURE_GROUP, standardize=STANDARDIZE)
 gamma = compute_kernel_bandwidth(signal)
 kernel_params = {"gamma": gamma}
 
@@ -305,3 +330,5 @@ for thresh in [5.0, 8.0, 10.0, 12.0, 15.0, 20.0]:
         min_gap_days=MIN_GAP_DAYS,
     )
     print(f"  threshold={thresh:5.1f}  →  {len(b):2d} boundaries")
+
+# %%
