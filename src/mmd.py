@@ -3,6 +3,7 @@
 from typing import Any, Callable, Mapping, Optional, Tuple
 
 import numpy as np
+from kta import kta
 from numpy.typing import NDArray
 
 
@@ -17,6 +18,9 @@ def mmd_squared(
     Kxx = kernel_fn(X, X, **(kernel_params or {}))
     Kyy = kernel_fn(Y, Y, **(kernel_params or {}))
     Kxy = kernel_fn(X, Y, **(kernel_params or {}))
+
+    print(f"Kxx shape: {Kxx.shape}, Kyy shape: {Kyy.shape}, Kxy shape: {Kxy.shape}")
+    print(f"X shape: {X.shape}, Y shape: {Y.shape}")
 
     m, n = len(X), len(Y)
 
@@ -77,8 +81,32 @@ def sliding_window_mmd(
             kernel_params,
         )
         std_from_null = (mmd - null_mean) / null_std if null_std > 0 else 0.0
+
+        kta_value = compute_kta(before, after, kernel_fn, kernel_params)
         results.append(
-            {"t": t, "mmd": mmd, "p_val": p_val, "std_from_null": std_from_null},
+            {
+                "t": t,
+                "mmd": mmd,
+                "p_val": p_val,
+                "std_from_null": std_from_null,
+                "kta_val": kta_value,
+            },
         )
 
     return results
+
+
+def compute_kta(X, Y, kernel_fn, kernel_params):
+    params = kernel_params or {}
+
+    Z = np.concatenate([X, Y])
+    K = kernel_fn(Z, Z, **params)
+
+    n_x = X.shape[0]
+    n_y = Y.shape[0]
+
+    y = np.empty(n_x + n_y, dtype=np.float32)
+    y[:n_x] = -1
+    y[n_x:] = 1
+    print(f"K.shape={K.shape}, y.shape={y.shape}, Z.shape={Z.shape}")
+    return kta(K, y)
