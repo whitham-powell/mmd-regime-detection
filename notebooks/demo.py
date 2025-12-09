@@ -21,7 +21,7 @@ are validated against known market events (e.g., COVID-19 crash).
 
 Usage:
     Run cells sequentially in an interactive environment (VS Code, Jupyter),
-    or execute as a script: python scratch.py
+    or execute as a script: python demo.py
 """
 
 # %%
@@ -321,62 +321,3 @@ if "results_df" in dir():
             min_gap_days=MIN_GAP_DAYS,
         )
         print(f"  threshold={thresh:5.1f}  →  {len(b):2d} boundaries")
-
-# %% [markdown]
-# ## Window Size Comparison
-# Compare how different window sizes affect detection.
-
-# %%
-# Window comparison (uncomment to run - takes several minutes)
-
-# WINDOWS_TO_TRY = [20, 30, 45, 60]
-# window_comparison = {}
-#
-# for w in WINDOWS_TO_TRY:
-#     print(f"Running window={w}...")
-#     res = sliding_window_mmd(
-#         data=signal,
-#         kernel_fn=rbf,
-#         kernel_params=kernel_params,
-#         window=w,
-#         step=STEP,
-#         n_permutations=500,  # fewer for speed
-#     )
-#     window_comparison[w] = results_to_dataframe(res, date_index)
-#
-# print("\nWindow Size Comparison:")
-# print("-" * 40)
-# for w, res_df in window_comparison.items():
-#     b = find_regime_boundaries(res_df, threshold=THRESHOLD)
-#     print(f"  window={w:3d}  →  {len(b):2d} boundaries")
-
-# %% [markdown]
-# ## Feature Group Comparison
-# Compare detection using different feature sets.
-
-# %%
-# Feature comparison (uncomment to run)
-
-# FEATURE_GROUPS_TO_TRY = ["base", "intraday_shape", "vol_structure"]
-# feature_comparison = {}
-#
-# for fg in FEATURE_GROUPS_TO_TRY:
-#     print(f"Running feature group: {fg}...")
-#     sig, idx = prepare_signal(fg)
-#     g = compute_kernel_bandwidth(sig)
-#
-#     res = sliding_window_mmd(
-#         data=sig,
-#         kernel_fn=rbf,
-#         kernel_params={"gamma": g},
-#         window=WINDOW,
-#         step=STEP,
-#         n_permutations=500,
-#     )
-#     feature_comparison[fg] = results_to_dataframe(res, idx)
-#
-# print("\nFeature Group Comparison:")
-# print("-" * 40)
-# for fg, res_df in feature_comparison.items():
-#     b = find_regime_boundaries(res_df, threshold=THRESHOLD)
-#     print(f"  {fg:20s}  →  {len(b):2d} boundaries")
