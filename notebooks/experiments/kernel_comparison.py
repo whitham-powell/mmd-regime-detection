@@ -347,6 +347,139 @@ plt.show()
 
 
 # %% [markdown]
+# ## Standardization Effect
+#
+# Compare regime detection with and without feature standardization (RBF kernel only).
+
+# %%
+# =============================================================================
+# Standardization Comparison (RBF only)
+# =============================================================================
+
+# Run RBF with and without standardization
+standardization_results = {}
+
+for standardize, label in [(True, "Standardized"), (False, "Raw")]:
+    print(f"\nRunning RBF ({label})...")
+
+    sig, idx = prepare_signal(FEATURE_GROUP, standardize=standardize)
+
+    # Recompute median heuristic for this data
+    sigma = np.median(np.abs(sig - np.median(sig)))
+    gamma = 1.0 / (2 * sigma**2)
+
+    start_time = time.time()
+    results = sliding_window_mmd(
+        data=sig,
+        kernel_fn=rbf,
+        kernel_params={"gamma": gamma},
+        window=WINDOW,
+        step=STEP,
+        n_permutations=N_PERMUTATIONS,
+    )
+    elapsed = time.time() - start_time
+
+    results_df = results_to_dataframe(results, idx)
+    standardization_results[label] = {
+        "results_df": results_df,
+        "gamma": gamma,
+        "runtime": elapsed,
+    }
+
+    boundaries = find_regime_boundaries(
+        results_df,
+        metric=METRIC,
+        threshold=THRESHOLD,
+        min_gap_days=MIN_GAP_DAYS,
+    )
+    print(f"  γ = {gamma:.4f}")
+    print(f"  Boundaries: {len(boundaries)}")
+    print(f"  Runtime: {elapsed:.1f}s")
+
+# %%
+# =============================================================================
+# Standardization Comparison Figure
+# =============================================================================
+
+fig, axes = plt.subplots(2, 1, figsize=(14, 6), sharex=True)
+
+colors_std = {"Standardized": "blue", "Raw": "orange"}
+
+for ax, (label, data) in zip(axes, standardization_results.items()):
+    results_df = data["results_df"]
+    color = colors_std[label]
+
+    ax.plot(
+        results_df.index,
+        results_df["std_from_null"],
+        color=color,
+        lw=1,
+        label=f"RBF ({label})",
+    )
+    ax.axhline(THRESHOLD, color="red", ls="--", lw=1, alpha=0.7)
+
+    boundaries = find_regime_boundaries(
+        results_df,
+        metric=METRIC,
+        threshold=THRESHOLD,
+        min_gap_days=MIN_GAP_DAYS,
+    )
+    for b in boundaries:
+        ax.axvline(b, color="red", alpha=0.3, lw=1)
+
+    ax.set_ylabel("Std from Null", fontsize=10)
+    ax.set_title(
+        f"RBF {label} (γ={data['gamma']:.4f}, {len(boundaries)} boundaries)",
+        fontsize=11,
+    )
+    ax.grid(True, alpha=0.3)
+    ax.legend(loc="upper right", fontsize=9)
+
+axes[-1].xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
+axes[-1].xaxis.set_major_locator(mdates.MonthLocator(interval=3))
+plt.setp(axes[-1].xaxis.get_majorticklabels(), rotation=45, ha="right")
+axes[-1].set_xlabel("Date", fontsize=10)
+
+fig.suptitle(
+    "Effect of Feature Standardization on Regime Detection",
+    fontsize=12,
+    fontweight="bold",
+    y=1.02,
+)
+
+plt.tight_layout()
+plt.show()
+
+# %%
+# =============================================================================
+# Standardization Summary Table
+# =============================================================================
+
+std_rows = []
+for label, data in standardization_results.items():
+    results_df = data["results_df"]
+    boundaries = find_regime_boundaries(
+        results_df,
+        metric=METRIC,
+        threshold=THRESHOLD,
+        min_gap_days=MIN_GAP_DAYS,
+    )
+    std_rows.append(
+        {
+            "Features": label,
+            "γ (median heuristic)": data["gamma"],
+            "Boundaries": len(boundaries),
+            "Peak Std": results_df["std_from_null"].max(),
+            "Mean Std": results_df["std_from_null"].mean(),
+        },
+    )
+
+std_summary_df = pd.DataFrame(std_rows).set_index("Features")
+std_summary_df = std_summary_df.round(2)
+print("\nStandardization Comparison:")
+print(std_summary_df.to_string())
+
+# %% [markdown]
 # ## Observations
 #
 # ### Key Findings
@@ -368,11 +501,18 @@ plt.show()
 #    - For real-time applications, linear may be preferred if it captures
 #      the same major events
 #
+# 4. **Feature standardization matters**
+#    - Standardized features typically detect more boundaries
+#    - Without standardization, high-magnitude features (e.g., log_volume) dominate
+#    - Standardization allows all features to contribute equally to kernel distances
+#    - The median heuristic γ changes significantly with standardization
+#
 # ### Implications
 #
 # - For this dataset, **RBF with median heuristic is a reasonable default**
 # - The convergence across kernels suggests the detected regimes are
 #   **genuine distributional shifts**, not kernel-specific artifacts
+# - **Feature standardization is recommended** for multi-feature inputs
 # - Feature engineering (what goes into the kernel) may matter more than
 #   kernel choice itself — see feature comparison experiments
 #
