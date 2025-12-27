@@ -321,6 +321,7 @@ summarize_boundaries(boundaries, results_df)
 fig1, axes1 = plot_regime_detection_panel(
     price_series=df["Close"],
     results_df=results_df,
+    ticker=TICKER,
     metric=METRIC,
     threshold=THRESHOLD,
     min_gap_days=MIN_GAP_DAYS,
@@ -335,6 +336,7 @@ fig1, axes1 = plot_regime_detection_panel(
 fig2, ax2 = plot_regime_boundaries_summary(
     price_series=df["Close"],
     results_df=results_df,
+    ticker=TICKER,
     boundaries=boundaries,
     window_days=WINDOW,
 )

@@ -78,6 +78,7 @@ def find_regime_boundaries(
 def plot_regime_detection_panel(
     price_series: pd.Series,
     results_df: pd.DataFrame,
+    ticker: str = "SPY",
     metric: str = "std_from_null",
     threshold: float = 10.0,
     min_gap_days: int = 20,
@@ -128,7 +129,7 @@ def plot_regime_detection_panel(
     )
 
     # Panel 1: Price with regime boundaries
-    axes[0].plot(price_aligned.index, price_aligned.values, "k-", lw=1, label="SPY")
+    axes[0].plot(price_aligned.index, price_aligned.values, "k-", lw=1, label=ticker)
     for b in boundaries:
         axes[0].axvline(b, color="red", alpha=0.7, lw=1.5, ls="--")
     axes[0].set_ylabel("Price", fontsize=10)
@@ -201,6 +202,7 @@ def plot_regime_boundaries_summary(
     price_series: pd.Series,
     results_df: pd.DataFrame,
     boundaries: pd.DatetimeIndex,
+    ticker: str = "SPY",
     window_days: int = 30,
     figsize: Tuple[int, int] = (12, 5),
     annotate: bool = True,
@@ -236,7 +238,7 @@ def plot_regime_boundaries_summary(
     end_date = results_df.index[-1]
     price_aligned = price_series.loc[start_date:end_date]
 
-    ax.plot(price_aligned.index, price_aligned.values, "k-", lw=1, label="SPY")
+    ax.plot(price_aligned.index, price_aligned.values, "k-", lw=1, label=ticker)
 
     # Draw boundary lines
     for b in boundaries:
