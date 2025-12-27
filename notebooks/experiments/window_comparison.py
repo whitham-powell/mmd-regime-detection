@@ -32,8 +32,8 @@ from kta import rbf
 from sklearn.preprocessing import StandardScaler
 
 from regime_detection import (
-    df,
     find_regime_boundaries,
+    load_ohlcv,
     make_features,
     results_to_dataframe,
     sliding_window_mmd,
@@ -43,6 +43,11 @@ from regime_detection import (
 # =============================================================================
 # Configuration
 # =============================================================================
+
+TICKER = "SPY"
+START_DATE = "2020-01-01"
+END_DATE = None
+PERIOD = None
 
 # Window sizes to compare (in trading days)
 WINDOWS = [20, 30, 45, 60, 90]
@@ -63,18 +68,29 @@ STANDARDIZE = True
 
 # %%
 # =============================================================================
+# Data Loading
+# =============================================================================
+
+df = load_ohlcv(TICKER, start=START_DATE, end=END_DATE, period=PERIOD)
+print(f"Loaded {TICKER}: {len(df)} rows")
+print(f"Date range: {df.index[0].date()} to {df.index[-1].date()}")
+
+
+# %%
+# =============================================================================
 # Data Preparation
 # =============================================================================
 
 
 def prepare_signal(
+    df: pd.DataFrame,
     feature_group: str = "base",
     standardize: bool = True,
 ) -> Tuple[np.ndarray, pd.DatetimeIndex]:
     """
     Load and prepare feature matrix for MMD analysis.
     """
-    features = make_features(feature_group)
+    features = make_features(df, feature_group)
     print(f"Feature group: {feature_group}")
     print(f"Features: {list(features.columns)}")
     print(f"Shape: {features.shape}")
@@ -98,7 +114,7 @@ def prepare_signal(
 # =============================================================================
 
 # Prepare data
-signal, date_index = prepare_signal(FEATURE_GROUP, standardize=STANDARDIZE)
+signal, date_index = prepare_signal(df, FEATURE_GROUP, standardize=STANDARDIZE)
 
 # Compute kernel bandwidth (same for all windows)
 sigma = np.median(np.abs(signal - np.median(signal)))
@@ -312,7 +328,7 @@ for i, ax in enumerate(axes[:n_windows]):
         ax.set_ylabel("Price", fontsize=10)
 
 fig.suptitle(
-    "Detected Regime Boundaries by Window Size",
+    f"{TICKER} Detected Regime Boundaries by Window Size",
     fontsize=12,
     fontweight="bold",
     y=1.02,

@@ -31,14 +31,23 @@ import pandas as pd
 from kta import linear, polynomial, rbf
 from sklearn.preprocessing import StandardScaler
 
-from regime_detection.features import df, make_features
-from regime_detection.mmd import sliding_window_mmd
-from regime_detection.plots import find_regime_boundaries, results_to_dataframe
+from regime_detection import (
+    find_regime_boundaries,
+    load_ohlcv,
+    make_features,
+    results_to_dataframe,
+    sliding_window_mmd,
+)
 
 # %%
 # =============================================================================
 # Configuration
 # =============================================================================
+
+TICKER = "SPY"
+START_DATE = "2020-01-01"
+END_DATE = None
+PERIOD = None
 
 # Sliding window parameters (same as demo.py for fair comparison)
 WINDOW = 30
@@ -59,33 +68,29 @@ STANDARDIZE = True  # Recommended for kernel methods
 
 # %%
 # =============================================================================
+# Data Loading
+# =============================================================================
+
+df = load_ohlcv(TICKER, start=START_DATE, end=END_DATE, period=PERIOD)
+print(f"Loaded {TICKER}: {len(df)} rows")
+print(f"Date range: {df.index[0].date()} to {df.index[-1].date()}")
+
+
+# %%
+# =============================================================================
 # Data Preparation
 # =============================================================================
 
 
 def prepare_signal(
+    df: pd.DataFrame,
     feature_group: str = "base",
     standardize: bool = True,
 ) -> Tuple[np.ndarray, pd.DatetimeIndex]:
     """
     Load and prepare feature matrix for MMD analysis.
-
-    Parameters
-    ----------
-    feature_group : str
-        Name of feature group to load
-    standardize : bool
-        If True, standardize features to zero mean and unit variance.
-        Recommended for kernel methods to prevent scale-dominated distances.
-
-    Returns
-    -------
-    signal : np.ndarray
-        Feature matrix (n_samples, n_features)
-    index : pd.DatetimeIndex
-        Corresponding dates
     """
-    features = make_features(feature_group)
+    features = make_features(df, feature_group)
     print(f"Feature group: {feature_group}")
     print(f"Features: {list(features.columns)}")
     print(f"Shape: {features.shape}")
@@ -133,7 +138,7 @@ def get_kernel_configs(signal: np.ndarray) -> Dict[str, Tuple[Callable, Dict]]:
 # =============================================================================
 
 # Prepare data
-signal, date_index = prepare_signal(FEATURE_GROUP, standardize=STANDARDIZE)
+signal, date_index = prepare_signal(df, FEATURE_GROUP, standardize=STANDARDIZE)
 kernel_configs = get_kernel_configs(signal)
 
 # Store results and metrics
@@ -336,7 +341,7 @@ for ax in axes[::2]:
     ax.set_ylabel("Price", fontsize=10)
 
 fig.suptitle(
-    "Detected Regime Boundaries by Kernel",
+    f"{TICKER} Detected Regime Boundaries by Kernel",
     fontsize=12,
     fontweight="bold",
     y=1.02,
@@ -362,7 +367,7 @@ standardization_results = {}
 for standardize, label in [(True, "Standardized"), (False, "Raw")]:
     print(f"\nRunning RBF ({label})...")
 
-    sig, idx = prepare_signal(FEATURE_GROUP, standardize=standardize)
+    sig, idx = prepare_signal(df, FEATURE_GROUP, standardize=standardize)
 
     # Recompute median heuristic for this data
     sigma = np.median(np.abs(sig - np.median(sig)))
