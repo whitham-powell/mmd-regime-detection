@@ -30,19 +30,26 @@ import pandas as pd
 from kta import rbf
 from sklearn.preprocessing import StandardScaler
 
-from regime_detection.features import df, make_features
-from regime_detection.mmd import sliding_window_mmd
-from regime_detection.plots import (
+from regime_detection import (
     find_regime_boundaries,
+    load_ohlcv,
+    make_features,
     plot_regime_boundaries_summary,
     plot_regime_detection_panel,
     results_to_dataframe,
+    sliding_window_mmd,
 )
 
 # %%
 # =============================================================================
 # Configuration
 # =============================================================================
+
+# --- NEW: Ticker is now configurable! ---
+TICKER = "SPY"  # Try "AAPL", "QQQ", "MSFT", etc.
+START_DATE = "2020-01-01"
+END_DATE = None  # None = today
+PERIOD = None  # Use date range instead of period
 
 # Sliding window parameters
 WINDOW = 30  # days in each window (compare before vs after)
@@ -63,11 +70,23 @@ STANDARDIZE = True  # Use StandardScaler to standardize features
 
 # %%
 # =============================================================================
+# Data Loading
+# =============================================================================
+
+df = load_ohlcv(TICKER, start=START_DATE, end=END_DATE, period=PERIOD)
+
+print(f"Loaded {TICKER}: {len(df)} rows")
+print(f"Date range: {df.index[0].date()} to {df.index[-1].date()}")
+
+
+# %%
+# =============================================================================
 # Data Preparation
 # =============================================================================
 
 
 def prepare_signal(
+    df: pd.DataFrame,  # <-- NEW: df is now a parameter
     feature_group: str = "base",
     standardize: bool = True,
 ) -> tuple[np.ndarray, pd.DatetimeIndex]:
@@ -76,6 +95,8 @@ def prepare_signal(
 
     Parameters
     ----------
+    df : pd.DataFrame
+        OHLCV DataFrame (from load_ohlcv)
     feature_group : str
         Name of feature group to load
     standardize : bool
@@ -89,7 +110,9 @@ def prepare_signal(
     index : pd.DatetimeIndex
         Corresponding dates
     """
-    features = make_features(feature_group)
+
+    features = make_features(df, feature_group)
+
     print(f"Feature group: {feature_group}")
     print(f"Features: {list(features.columns)}")
     print(f"Shape: {features.shape}")
@@ -247,8 +270,8 @@ def summarize_boundaries(
 # Main Execution
 # =============================================================================
 
-# --- Prepare data ---
-signal, date_index = prepare_signal(FEATURE_GROUP, standardize=STANDARDIZE)
+# --- Prepare data ----
+signal, date_index = prepare_signal(df, FEATURE_GROUP, standardize=STANDARDIZE)
 gamma = compute_kernel_bandwidth(signal)
 kernel_params = {"gamma": gamma}
 
@@ -298,10 +321,11 @@ summarize_boundaries(boundaries, results_df)
 fig1, axes1 = plot_regime_detection_panel(
     price_series=df["Close"],
     results_df=results_df,
+    ticker=TICKER,
     metric=METRIC,
     threshold=THRESHOLD,
     min_gap_days=MIN_GAP_DAYS,
-    title=f"Market Regime Detection via MMD (window={WINDOW}d, {FEATURE_GROUP} features)",
+    title=f"{TICKER} Regime Detection via MMD (window={WINDOW}d, {FEATURE_GROUP} features)",
 )
 
 # %%
@@ -312,6 +336,7 @@ fig1, axes1 = plot_regime_detection_panel(
 fig2, ax2 = plot_regime_boundaries_summary(
     price_series=df["Close"],
     results_df=results_df,
+    ticker=TICKER,
     boundaries=boundaries,
     window_days=WINDOW,
 )

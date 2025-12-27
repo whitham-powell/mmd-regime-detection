@@ -49,7 +49,7 @@ from sklearn.preprocessing import StandardScaler
 from kta import rbf
 
 from regime_detection import (
-    df,
+    load_ohlcv,
     make_features,
     sliding_window_mmd,
     find_regime_boundaries,
@@ -57,8 +57,9 @@ from regime_detection import (
     results_to_dataframe,
 )
 
-# 1. Load and prepare features
-features = make_features("base")  # log prices + log volume
+# 1. Load data for any ticker
+df = load_ohlcv("SPY")
+features = make_features(df, "base")
 scaler = StandardScaler()
 signal = scaler.fit_transform(features.values)
 
@@ -135,7 +136,10 @@ Under the null hypothesis $H_0: P = Q$:
 ### Feature Groups
 
 ```python
-from regime_detection import make_features, FEATURE_GROUPS
+from regime_detection import load_ohlcv, make_features, FEATURE_GROUPS
+
+# Load data first
+df = load_ohlcv("SPY", period="2y")
 
 # Available groups
 print(FEATURE_GROUPS.keys())
@@ -143,10 +147,10 @@ print(FEATURE_GROUPS.keys())
 #  'vol_structure', 'sma', 'moving_true_range', 'all']
 
 # Single group
-X = make_features("base")
+X = make_features(df, "base")
 
 # Multiple groups
-X = make_features(["base", "vol_structure"])
+X = make_features(df, ["base", "vol_structure"])
 ```
 
 | Group | Features |
@@ -177,8 +181,9 @@ results = sliding_window_mmd(..., kernel_fn=linear, kernel_params={})
 mmd-regime-detection/
 ├── src/regime_detection/
 │   ├── __init__.py      # Public API exports
+│   ├── data.py          # Data loading (load_ohlcv)
 │   ├── mmd.py           # Core MMD computation and sliding window
-│   ├── features.py      # Data loading and feature engineering
+│   ├── features.py      # Feature engineering
 │   └── plots.py         # Visualization functions
 ├── notebooks/
 │   ├── demo.py          # Main demonstration notebook
