@@ -8,7 +8,7 @@ packages = ["regime_detection"]
 
 [project]
 name = "regime-detection"
-version = "0.1.0"
+version = "0.2.0" # Bumped for API refactor
 description = "Market regime detection via Maximum Mean Discrepancy (MMD) with kernel methods"
 authors = [{ name = "Elijah Whitham-Powell" }]
 readme = "README.md"
