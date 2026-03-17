@@ -13,7 +13,7 @@ description = "Market regime detection via Maximum Mean Discrepancy (MMD) with k
 authors = [{ name = "Elijah Whitham-Powell" }]
 readme = "README.md"
 license = { text = "MIT" }
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 keywords = [
     "kernel-methods",
     "mmd",
@@ -36,7 +36,7 @@ dependencies = [
     "scikit-learn>=1.3.0",
     "scipy>=1.11.0",
     "yfinance>=0.2.0",
-    "kernel-target-alignment @ git+https://github.com/whitham-powell/kernel-target-alignment.git",
+    "kernel-target-alignment @ git+https://github.com/whitham-powell/kernel-target-alignment.git@master",
 ]
 
 [project.urls]
